@@ -35,6 +35,7 @@ async def aai_transcribe(file,
         raise gr.Error("Audio file has not been loaded properly")
 
     config = aai.TranscriptionConfig(speaker_labels=diarization,
+                                     language_detection=False,
                                      language_code=language_code,
                                      speech_model=aai.SpeechModel.best)
     transcriber = aai.Transcriber(config=config)
