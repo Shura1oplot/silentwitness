@@ -1,0 +1,5 @@
+python-dotenv
+assemblyai
+openai
+gradio
+
