@@ -51,7 +51,12 @@ async def aai_transcribe(file,
     if transcript.status == aai.TranscriptStatus.error:
         return transcript.error
 
-    return transcript.text
+    parts = []
+
+    for utterance in transcript.utterances:
+        parts.append(f"Speaker {utterance.speaker}:\n{utterance.text}")
+
+    return "\n\n".join(parts)
 
 
 async def openai_query(prompt):
@@ -119,7 +124,14 @@ def main(argv=sys.argv):
             with gr.Row():
                 with gr.Column():
                     in_openai_prompt = gr.TextArea(
-                        label="Prompt")
+                        label="Prompt",
+                        value="""\
+Помоги управленческому консультанту суммировать звонок с клиентом (Асият). Необходимо выделить, что клиент хочет, чтобы консультанты сделали. Тебе будет предоставлена транскрипт звонка с клиентом (Асият).
+
+<транскрипт>
+...
+</транскрипт>\
+""")
 
                     btn_openai_submit = gr.Button("Submit")
 
