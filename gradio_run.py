@@ -151,7 +151,7 @@ def main(argv=sys.argv):
             inputs=[in_openai_prompt],
             outputs=[out_openai_response])
 
-    demo.queue(default_concurrency_limit=20)
+    demo.queue(default_concurrency_limit=20)  # FIXME: constant
 
     demo.launch(root_path="/silentwitness",
                 auth=auth)
