@@ -13,6 +13,7 @@ import openai
 import assemblyai as aai
 
 import gradio as gr
+import gradio_client.utils
 
 
 ################################################################################
@@ -29,6 +30,19 @@ BASE_DIR = Path(__file__).parent.absolute()
 PASSWORD_SALT = os.environ["PASSWORD_SALT"]
 
 aai.settings.api_key = os.environ["ASSEMBLYAI_API_KEY"]
+aai.settings.http_timeout = 120  # seconds
+
+
+################################################################################
+
+
+# https://github.com/gradio-app/gradio/issues/9646
+def is_valid_file(file_path: str, file_types: list[str]) -> bool:
+    file_extension = os.path.splitext(file_path)[1]
+    return file_extension in file_types
+
+
+gradio_client.utils.is_valid_file = is_valid_file
 
 
 ################################################################################
