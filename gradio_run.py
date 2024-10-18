@@ -67,8 +67,9 @@ async def aai_transcribe(file,
 
     parts = []
 
-    for utterance in transcript.utterances:
-        parts.append(f"Speaker {utterance.speaker}:\n{utterance.text}")
+    if transcript.utterances:
+        for utterance in transcript.utterances:
+            parts.append(f"Speaker {utterance.speaker}:\n{utterance.text}")
 
     return "\n\n".join(parts)
 
