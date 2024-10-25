@@ -29,6 +29,8 @@ BASE_DIR = Path(__file__).parent.absolute()
 
 PASSWORD_SALT = os.environ["PASSWORD_SALT"]
 
+VICTIM_CONCURRENCY = 5
+
 aai.settings.api_key = os.environ["ASSEMBLYAI_API_KEY"]
 aai.settings.http_timeout = 120  # seconds
 
@@ -74,7 +76,7 @@ async def aai_transcribe(file,
     return "\n\n".join(parts)
 
 
-async def openai_query(prompt):
+async def llm_query(prompt):
     client = openai.AsyncOpenAI()
 
     try:
@@ -88,6 +90,38 @@ async def openai_query(prompt):
 
     return chat_completion.choices[0].message.content
 
+
+async def gather_with_concurrency(n, *coros):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_coro(coro):
+        async with semaphore:
+            return await coro
+
+    return await asyncio.gather(*(sem_coro(c) for c in coros))
+
+
+def victim_query(files, prompt_template):
+    prompts = []
+
+    for file in files:
+        content = open(file, encoding="utf-8").read().strip()
+        prompts.append(prompt_template.format(content=content))
+
+    client = openai.AsyncOpenAI()
+
+    chats = []
+
+    for prompt in prompts:
+        chats.append(client.chat.completions.create(
+            messages=[{"role": "user",
+                       "content": prompt}],
+            model="gpt-4o"))
+
+    chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, chats)
+    responses = [x.choices[0].message.content for x in chat_completions]
+
+    return "\n\n".join(responses)
 
 def auth(username, password):
     users = {}
@@ -138,7 +172,7 @@ def main(argv=sys.argv):
         with gr.Tab("Witness"):
             with gr.Row():
                 with gr.Column():
-                    in_openai_prompt = gr.TextArea(
+                    in_llm_prompt = gr.TextArea(
                         label="Prompt",
                         value="""\
 Помоги управленческому консультанту суммировать звонок с клиентом (Асият). Необходимо выделить, что клиент хочет, чтобы консультанты сделали. Тебе будет предоставлена транскрипт звонка с клиентом (Асият).
@@ -148,11 +182,29 @@ def main(argv=sys.argv):
 </транскрипт>\
 """)
 
-                    btn_openai_submit = gr.Button("Submit")
+                    btn_llm_submit = gr.Button("Submit")
 
                 with gr.Column():
-                    out_openai_response = gr.TextArea(
+                    out_llm_response = gr.TextArea(
                         label="Response")
+
+        with gr.Tab("Victim"):
+            with gr.Row():
+                with gr.Column():
+                    in_vic_files = gr.Files(
+                        label="Text files",
+                        file_types=[".txt"])
+
+                    in_vic_prompt = gr.TextArea(
+                        label="Prompt",
+                        value="{content}")
+
+                    btn_vic_submit = gr.Button("Submit")
+
+                with gr.Column():
+                    out_vic_response = gr.TextArea(
+                        label="Result")
+
 
         btn_aai_submit.click(
             fn=aai_transcribe,
@@ -161,10 +213,15 @@ def main(argv=sys.argv):
                     in_aai_language],
             outputs=[out_aai_transcript])
 
-        btn_openai_submit.click(
-            fn=openai_query,
-            inputs=[in_openai_prompt],
-            outputs=[out_openai_response])
+        btn_llm_submit.click(
+            fn=llm_query,
+            inputs=[in_llm_prompt],
+            outputs=[out_llm_response])
+
+        btn_vic_submit.click(
+            fn=victim_query,
+            inputs=[in_vic_files, in_vic_prompt],
+            outputs=[out_vic_response])
 
     demo.queue(default_concurrency_limit=20)  # FIXME: constant
 
