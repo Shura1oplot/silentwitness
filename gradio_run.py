@@ -101,7 +101,7 @@ async def gather_with_concurrency(n, *coros):
     return await asyncio.gather(*(semaphore_coro(coro) for coro in coros))
 
 
-def victim_query(files, model, prompt_template):
+async def victim_query(files, model, prompt_template):
     prompts = []
 
     for file in files:
@@ -118,7 +118,7 @@ def victim_query(files, model, prompt_template):
                        "content": prompt}],
             model=model))
 
-    chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, chats)
+    chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
     responses = [x.choices[0].message.content for x in chat_completions]
 
     return "\n\n".join(responses)
