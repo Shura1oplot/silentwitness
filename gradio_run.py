@@ -94,14 +94,14 @@ async def llm_query(prompt):
 async def gather_with_concurrency(n, *coros):
     semaphore = asyncio.Semaphore(n)
 
-    async def sem_coro(coro):
+    async def semaphore_coro(coro):
         async with semaphore:
             return await coro
 
-    return await asyncio.gather(*(sem_coro(c) for c in coros))
+    return await asyncio.gather(*(semaphore_coro(coro) for coro in coros))
 
 
-def victim_query(files, prompt_template):
+def victim_query(files, model, prompt_template):
     prompts = []
 
     for file in files:
@@ -116,7 +116,7 @@ def victim_query(files, prompt_template):
         chats.append(client.chat.completions.create(
             messages=[{"role": "user",
                        "content": prompt}],
-            model="gpt-4o"))
+            model=model))
 
     chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, chats)
     responses = [x.choices[0].message.content for x in chat_completions]
@@ -175,11 +175,17 @@ def main(argv=sys.argv):
                     in_llm_prompt = gr.TextArea(
                         label="Prompt",
                         value="""\
-Помоги управленческому консультанту суммировать звонок с клиентом (Асият). Необходимо выделить, что клиент хочет, чтобы консультанты сделали. Тебе будет предоставлена транскрипт звонка с клиентом (Асият).
+Помоги управленческому консультанту составить резюме звонка с клиентом (Агроэко). \
+Особый акцент сделай на стратегических вызовах, целях, задачах, проектах, \
+болевых точках и КПЭ (KPI). Встречу консультанты (Александр Каленик) вели \
+с директором по маркетингу Агроэко (Дехаев Борис). Суммируй ТОЛЬКО то, \
+что говорил КЛИЕНТ, не учитывай гипотезы и варианты, выдвинутые консультантами. \
+Тебе будет предоставлен транскрипт записи встречи. Учти, что транскрипт может \
+содержать ошибки распознавания речи. Резюме должно быть на русском языке.
 
 <транскрипт>
 ...
-</транскрипт>\
+</транскрипт>
 """)
 
                     btn_llm_submit = gr.Button("Submit")
@@ -198,6 +204,11 @@ def main(argv=sys.argv):
                     in_vic_prompt = gr.TextArea(
                         label="Prompt",
                         value="{content}")
+
+                    in_vic_model = gr.Dropdown(
+                        label="Model",
+                        choices=["gpt-4o", "o1-preview"],
+                        value="gpt-4o")
 
                     btn_vic_submit = gr.Button("Submit")
 
@@ -220,7 +231,9 @@ def main(argv=sys.argv):
 
         btn_vic_submit.click(
             fn=victim_query,
-            inputs=[in_vic_files, in_vic_prompt],
+            inputs=[in_vic_files,
+                    in_vic_model,
+                    in_vic_prompt],
             outputs=[out_vic_response])
 
     demo.queue(default_concurrency_limit=20)  # FIXME: constant
