@@ -9,6 +9,7 @@ import asyncio
 from dotenv import load_dotenv
 
 import openai
+import anthropic
 
 import assemblyai as aai
 
@@ -27,12 +28,16 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).parent.absolute()
 
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+
 PASSWORD_SALT = os.environ["PASSWORD_SALT"]
 
 VICTIM_CONCURRENCY = 5
 
 aai.settings.api_key = os.environ["ASSEMBLYAI_API_KEY"]
 aai.settings.http_timeout = 120  # seconds
+
+LLM_CLAUDE = "claude-3-5-sonnet-20241022"
 
 
 ################################################################################
@@ -65,7 +70,7 @@ async def aai_transcribe(file,
     transcript = await asyncio.wrap_future(future)
 
     if transcript.status == aai.TranscriptStatus.error:
-        return transcript.error
+        raise gr.Error(transcript.error)
 
     parts = []
 
@@ -76,19 +81,51 @@ async def aai_transcribe(file,
     return "\n\n".join(parts)
 
 
-async def llm_query(prompt):
-    client = openai.AsyncOpenAI()
+async def llm_query(prompt, model):
+    if model.startswith("gpt") or model.startswith("o1"):
+        client = openai.AsyncOpenAI()
+        
+        try:
+            response = await client.chat.completions.create(
+                messages=[{"role": "user",
+                           "content": prompt}],
+                model=model)
 
-    try:
-        chat_completion = await client.chat.completions.create(
-            messages=[{"role": "user",
-                       "content": prompt}],
-            model="o1-preview")
+        except openai.BadRequestError as e:
+            raise gr.Error(e)
+    
+        try:
+            raise gr.Error(response.error)
+        except AttributeError:
+            pass
+        
+        return response.choices[0].message.content
+    
+    elif model.startswith("claude"):
+        client = anthropic.AsyncAnthropic(
+            api_key=ANTHROPIC_API_KEY,
+            timeout=120.0)
 
-    except openai.BadRequestError as e:
-        raise gr.Error(e)
+        try:
+            response = await client.messages.create(
+                model=model,
+                messages=[{"role": "user",
+                           "content": prompt}],
+                temperature=0,
+                max_tokens=4096)
+        
+        except anthropic.AnthropicError as e:
+            raise gr.Error(e)
 
-    return chat_completion.choices[0].message.content
+        try:
+            raise gr.Error(response.error.message)
+        except AttributeError:
+            pass
+
+        return response.content[0].text
+
+    else:
+        ValueError(model)
 
 
 async def gather_with_concurrency(n, *coros):
@@ -118,8 +155,11 @@ async def victim_query(files, model, prompt_template):
                        "content": prompt}],
             model=model))
 
-    chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
-    responses = [x.choices[0].message.content for x in chat_completions]
+    try:
+        chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
+        responses = [x.choices[0].message.content for x in chat_completions]
+    except Exception as e:
+        raise gr.Error(e)
 
     return "\n\n".join(responses)
 
@@ -187,6 +227,12 @@ def main(argv=sys.argv):
 ...
 </транскрипт>
 """)
+                    in_llm_model = gr.Dropdown(
+                        label="Model",
+                        choices=["o1-preview",
+                                 "gpt-4o",
+                                 LLM_CLAUDE],
+                        value="o1-preview")
 
                     btn_llm_submit = gr.Button("Submit")
 
@@ -207,7 +253,9 @@ def main(argv=sys.argv):
 
                     in_vic_model = gr.Dropdown(
                         label="Model",
-                        choices=["gpt-4o", "o1-preview"],
+                        choices=["gpt-4o",
+                                 "o1-preview",
+                                 LLM_CLAUDE],
                         value="gpt-4o")
 
                     btn_vic_submit = gr.Button("Submit")
@@ -226,7 +274,8 @@ def main(argv=sys.argv):
 
         btn_llm_submit.click(
             fn=llm_query,
-            inputs=[in_llm_prompt],
+            inputs=[in_llm_prompt,
+                    in_llm_model],
             outputs=[out_llm_response])
 
         btn_vic_submit.click(
