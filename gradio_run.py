@@ -84,7 +84,7 @@ async def aai_transcribe(file,
 async def llm_query(prompt, model):
     if model.startswith("gpt") or model.startswith("o1"):
         client = openai.AsyncOpenAI()
-        
+
         try:
             response = await client.chat.completions.create(
                 messages=[{"role": "user",
@@ -93,15 +93,15 @@ async def llm_query(prompt, model):
 
         except openai.BadRequestError as e:
             raise gr.Error(e)
-    
+
         try:
             raise gr.Error(response.error)
         except AttributeError:
             pass
-        
+
         return response.choices[0].message.content
-    
-    elif model.startswith("claude"):
+
+    if model.startswith("claude"):
         client = anthropic.AsyncAnthropic(
             api_key=ANTHROPIC_API_KEY,
             timeout=120.0)
@@ -113,7 +113,7 @@ async def llm_query(prompt, model):
                            "content": prompt}],
                 temperature=0,
                 max_tokens=4096)
-        
+
         except anthropic.AnthropicError as e:
             raise gr.Error(e)
 
@@ -124,8 +124,7 @@ async def llm_query(prompt, model):
 
         return response.content[0].text
 
-    else:
-        ValueError(model)
+    alueError(model)
 
 
 async def gather_with_concurrency(n, *coros):
@@ -145,23 +144,55 @@ async def victim_query(files, model, prompt_template):
         content = open(file, encoding="utf-8").read().strip()
         prompts.append(prompt_template.format(content=content))
 
-    client = openai.AsyncOpenAI()
+    if model.startswith("gpt") or model.startswith("o1"):
+        client = openai.AsyncOpenAI()
 
-    chats = []
+        chats = []
 
-    for prompt in prompts:
-        chats.append(client.chat.completions.create(
-            messages=[{"role": "user",
-                       "content": prompt}],
-            model=model))
+        kwargs = {}
 
-    try:
-        chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
-        responses = [x.choices[0].message.content for x in chat_completions]
-    except Exception as e:
-        raise gr.Error(e)
+        if model.startswith("gpt"):
+            kwargs["temperature"] - 0.0
 
-    return "\n\n".join(responses)
+        for prompt in prompts:
+            chats.append(client.chat.completions.create(
+                messages=[{"role": "user",
+                           "content": prompt}],
+                model=model,
+                **kwargs))
+
+        try:
+            chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
+            responses = [x.choices[0].message.content for x in chat_completions]
+        except Exception as e:
+            raise gr.Error(e)
+
+        return "\n\n".join(responses)
+
+    if model.startswith("claude"):
+        client = anthropic.AsyncAnthropic(
+            api_key=ANTHROPIC_API_KEY,
+            timeout=120.0)
+
+        chats = []
+
+        for prompt in prompts:
+            chats.append(client.messages.create(
+                messages=[{"role": "user",
+                           "content": prompt}],
+                model=model,
+                temperature=0,
+                max_tokens=4096))
+
+        try:
+            chat_completions = await gather_with_concurrency(VICTIM_CONCURRENCY, *chats)
+            responses = [x.content[0].text for x in chat_completions]
+        except Exception as e:
+            raise gr.Error(e)
+
+        return "\n\n".join(responses)
+
+    raise ValueError(model)
 
 def auth(username, password):
     users = {}
