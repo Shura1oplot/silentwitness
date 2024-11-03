@@ -14,7 +14,6 @@ import anthropic
 import assemblyai as aai
 
 import gradio as gr
-import gradio_client.utils
 
 
 ################################################################################
@@ -39,17 +38,9 @@ aai.settings.http_timeout = 120  # seconds
 
 LLM_CLAUDE = "claude-3-5-sonnet-20241022"
 
+GRADIO_CONCURRENCY_LIMIT = 20
 
-################################################################################
-
-
-# https://github.com/gradio-app/gradio/issues/9646
-def is_valid_file(file_path: str, file_types: list[str]) -> bool:
-    file_extension = os.path.splitext(file_path)[1]
-    return file_extension in file_types
-
-
-gradio_client.utils.is_valid_file = is_valid_file
+GRADIO_ROOT_PATH = os.environ.get("GRADIO_ROOT_PATH", "/silentwitness")
 
 
 ################################################################################
@@ -316,9 +307,9 @@ def main(argv=sys.argv):
                     in_vic_prompt],
             outputs=[out_vic_response])
 
-    demo.queue(default_concurrency_limit=20)  # FIXME: constant
+    demo.queue(default_concurrency_limit=GRADIO_CONCURRENCY_LIMIT)
 
-    demo.launch(root_path="/silentwitness",
+    demo.launch(root_path=GRADIO_ROOT_PATH,
                 auth=auth)
 
 
