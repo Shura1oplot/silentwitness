@@ -38,7 +38,7 @@ aai.settings.http_timeout = 120  # seconds
 
 LLM_CLAUDE = "claude-3-5-sonnet-20241022"
 
-GRADIO_CONCURRENCY_LIMIT = 20
+GRADIO_CONCURRENCY_LIMIT = 5
 
 GRADIO_ROOT_PATH = os.environ.get("GRADIO_ROOT_PATH", "/silentwitness")
 
