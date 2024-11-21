@@ -36,6 +36,7 @@ VICTIM_CONCURRENCY = 5
 aai.settings.api_key = os.environ["ASSEMBLYAI_API_KEY"]
 aai.settings.http_timeout = 120  # seconds
 
+LLM_GPT_4O = "gpt-4o-2024-11-20"
 LLM_CLAUDE = "claude-3-5-sonnet-20241022"
 
 GRADIO_CONCURRENCY_LIMIT = 5
@@ -252,7 +253,7 @@ def main(argv=sys.argv):
                     in_llm_model = gr.Dropdown(
                         label="Model",
                         choices=["o1-preview",
-                                 "gpt-4o",
+                                 LLM_GPT_4O,
                                  LLM_CLAUDE],
                         value="o1-preview")
 
@@ -275,10 +276,10 @@ def main(argv=sys.argv):
 
                     in_vic_model = gr.Dropdown(
                         label="Model",
-                        choices=["gpt-4o",
+                        choices=[LLM_GPT_4O,
                                  "o1-preview",
                                  LLM_CLAUDE],
-                        value="gpt-4o")
+                        value=LLM_GPT_4O)
 
                     btn_vic_submit = gr.Button("Submit")
 
