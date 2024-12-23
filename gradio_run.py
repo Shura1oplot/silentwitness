@@ -129,12 +129,19 @@ async def gather_with_concurrency(n, *coros):
     return await asyncio.gather(*(semaphore_coro(coro) for coro in coros))
 
 
-async def victim_query(files, model, prompt_template):
+async def victim_query(files, sep, model, prompt_template):
     prompts = []
 
     for file in files:
-        content = open(file, encoding="utf-8").read().strip()
-        prompts.append(prompt_template.format(content=content))
+        file_content = open(file, encoding="utf-8").read().strip()
+
+        if sep:
+            chunks = file_content.split(sep)
+        else:
+            chunks = [file_content]
+
+        for chunk in chunks:
+            prompts.append(prompt_template.format(content=chunk))
 
     if model.startswith("gpt") or model.startswith("o1"):
         client = openai.AsyncOpenAI()
@@ -270,6 +277,10 @@ def main(argv=sys.argv):
                         label="Text files",
                         file_types=[".txt"])
 
+                    in_vic_sep = gr.Textbox(
+                        label="Separator",
+                        value="")
+
                     in_vic_prompt = gr.TextArea(
                         label="Prompt",
                         value="{content}")
@@ -304,6 +315,7 @@ def main(argv=sys.argv):
         btn_vic_submit.click(
             fn=victim_query,
             inputs=[in_vic_files,
+                    in_vic_sep,
                     in_vic_model,
                     in_vic_prompt],
             outputs=[out_vic_response])
