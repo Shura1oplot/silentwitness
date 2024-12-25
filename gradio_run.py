@@ -151,7 +151,7 @@ async def victim_query(files, sep, model, prompt_template):
         kwargs = {}
 
         if model.startswith("gpt"):
-            kwargs["temperature"] - 0.0
+            kwargs["temperature"] = 0.0
 
         for prompt in prompts:
             chats.append(client.chat.completions.create(
