@@ -218,86 +218,100 @@ def auth(username, password):
 def main(argv=sys.argv):
     with gr.Blocks() as demo:
         with gr.Tab("Silent"):
-            with gr.Row():
-                with gr.Column(scale=1):
-                    in_aai_file = gr.File(
-                        label="Audio File",
-                        file_types=[".mp3"])
+            with gr.Column():
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        in_aai_file = gr.File(
+                            label="Audio File",
+                            file_types=[".mp3"])
 
-                    in_aai_diarization = gr.Checkbox(
-                        label="Diarization (label speakers)",
-                        value=True)
+                        in_aai_diarization = gr.Checkbox(
+                            label="Diarization (label speakers)",
+                            value=True)
 
-                    in_aai_language = gr.Dropdown(
-                        label="Language",
-                        choices=["ru", "en"],
-                        value="ru")
+                        in_aai_language = gr.Dropdown(
+                            label="Language",
+                            choices=["ru", "en"],
+                            value="ru")
 
-                    btn_aai_submit = gr.Button("Submit")
+                        btn_aai_submit = gr.Button("Submit")
 
-                with gr.Column(scale=5):
-                    out_aai_transcript = gr.TextArea(
-                        label="Transcript")
+                    with gr.Column(scale=5):
+                        out_aai_transcript = gr.TextArea(
+                            label="Transcript")
+
+                gr.Markdown(
+                    value=("Do not process any NDA restricted info as well as "
+                           "personal data."))
 
         with gr.Tab("Witness"):
-            with gr.Row():
-                with gr.Column():
-                    in_llm_prompt = gr.TextArea(
-                        label="Prompt",
-                        value="""\
-Помоги управленческому консультанту составить резюме звонка с клиентом (Агроэко). \
-Особый акцент сделай на стратегических вызовах, целях, задачах, проектах, \
-болевых точках и КПЭ (KPI). Встречу консультанты (Александр Каленик) вели \
-с директором по маркетингу Агроэко (Дехаев Борис). Суммируй ТОЛЬКО то, \
-что говорил КЛИЕНТ, не учитывай гипотезы и варианты, выдвинутые консультантами. \
-Тебе будет предоставлен транскрипт записи встречи. Учти, что транскрипт может \
-содержать ошибки распознавания речи. Резюме должно быть на русском языке.
+            with gr.Column():
+                with gr.Row():
+                    with gr.Column():
+                        in_llm_prompt = gr.TextArea(
+                            label="Prompt",
+                            value="""\
+    Помоги управленческому консультанту составить резюме звонка с клиентом (Агроэко). \
+    Особый акцент сделай на стратегических вызовах, целях, задачах, проектах, \
+    болевых точках и КПЭ (KPI). Встречу консультанты (Александр Каленик) вели \
+    с директором по маркетингу Агроэко (Дехаев Борис). Суммируй ТОЛЬКО то, \
+    что говорил КЛИЕНТ, не учитывай гипотезы и варианты, выдвинутые консультантами. \
+    Тебе будет предоставлен транскрипт записи встречи. Учти, что транскрипт может \
+    содержать ошибки распознавания речи. Резюме должно быть на русском языке.
 
-<транскрипт>
-...
-</транскрипт>
-""")
-                    in_llm_model = gr.Dropdown(
-                        label="Model",
-                        choices=["o1-preview",
-                                 LLM_GPT_4O,
-                                 LLM_CLAUDE],
-                        value="o1-preview")
+    <транскрипт>
+    ...
+    </транскрипт>
+    """)
+                        in_llm_model = gr.Dropdown(
+                            label="Model",
+                            choices=["o1-preview",
+                                     LLM_GPT_4O,
+                                     LLM_CLAUDE],
+                            value="o1-preview")
 
-                    btn_llm_submit = gr.Button("Submit")
+                        btn_llm_submit = gr.Button("Submit")
 
-                with gr.Column():
-                    out_llm_response = gr.TextArea(
-                        label="Response")
+                    with gr.Column():
+                        out_llm_response = gr.TextArea(
+                            label="Response")
+
+                gr.Markdown(
+                    value=("Do not process any NDA restricted info as well as "
+                           "personal data."))
 
         with gr.Tab("Victim"):
-            with gr.Row():
-                with gr.Column():
-                    in_vic_files = gr.Files(
-                        label="Text files",
-                        file_types=[".txt"])
+            with gr.Column():
+                with gr.Row():
+                    with gr.Column():
+                        in_vic_files = gr.Files(
+                            label="Text files",
+                            file_types=[".txt"])
 
-                    in_vic_sep = gr.Textbox(
-                        label="Separator",
-                        value="")
+                        in_vic_sep = gr.Textbox(
+                            label="Separator",
+                            value="")
 
-                    in_vic_prompt = gr.TextArea(
-                        label="Prompt",
-                        value="{content}")
+                        in_vic_prompt = gr.TextArea(
+                            label="Prompt",
+                            value="{content}")
 
-                    in_vic_model = gr.Dropdown(
-                        label="Model",
-                        choices=[LLM_GPT_4O,
-                                 "o1-preview",
-                                 LLM_CLAUDE],
-                        value=LLM_GPT_4O)
+                        in_vic_model = gr.Dropdown(
+                            label="Model",
+                            choices=[LLM_GPT_4O,
+                                     "o1-preview",
+                                     LLM_CLAUDE],
+                            value=LLM_GPT_4O)
 
-                    btn_vic_submit = gr.Button("Submit")
+                        btn_vic_submit = gr.Button("Submit")
 
-                with gr.Column():
-                    out_vic_response = gr.TextArea(
-                        label="Result")
+                    with gr.Column():
+                        out_vic_response = gr.TextArea(
+                            label="Result")
 
+                gr.Markdown(
+                    value=("Do not process any NDA restricted info as well as "
+                           "personal data."))
 
         btn_aai_submit.click(
             fn=aai_transcribe,
